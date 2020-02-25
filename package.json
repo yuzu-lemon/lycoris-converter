@@ -1,0 +1,10 @@
+{
+  "name": "lycoris-converter",
+  "version": "1.0.0",
+  "description": "Convert text and images to Lycoris viewable format.",
+  "main": "main.js",
+  "dependencies": {
+    "command-line-args": "^5.1.1",
+    "jimp": "^0.9.3"
+  }
+}

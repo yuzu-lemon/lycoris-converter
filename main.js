@@ -1,0 +1,202 @@
+'use strict';
+
+const commandLineArgs = require('command-line-args');
+const fs = require('fs');
+const path = require('path');
+const converter = require('./converter.js');
+
+const myBooksBuffer = Buffer.from([
+  '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff',
+  '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff',
+  '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff',
+  '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff',
+  '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff',
+  '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff',
+  '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff',
+  '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff',
+  '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff',
+  '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff',
+  '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff',
+  '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xfe', '0xfe', '0xff', '0xe0',
+  '0xff', '0xff', '0x7f', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff',
+  '0xff', '0xff', '0xfe', '0x7c', '0xff', '0xef', '0x7f', '0xff', '0x7f', '0xff',
+  '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xfe', '0x7c',
+  '0xff', '0xef', '0x7f', '0xff', '0x77', '0xff', '0xff', '0xff', '0xff', '0xff',
+  '0xff', '0xff', '0xff', '0xff', '0xfe', '0xba', '0xff', '0xef', '0x73', '0xe7',
+  '0x6e', '0x7f', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff',
+  '0xfe', '0xba', '0xbb', '0xe0', '0xed', '0xdb', '0x5d', '0xbf', '0xff', '0xff',
+  '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xfe', '0xd6', '0xbb', '0xef',
+  '0x5e', '0xbd', '0x3e', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff',
+  '0xff', '0xff', '0xfe', '0xd6', '0xd7', '0xef', '0x5e', '0xbd', '0x5f', '0x7f',
+  '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xfe', '0xee',
+  '0xd7', '0xef', '0x6d', '0xdb', '0x6d', '0xbf', '0xff', '0xff', '0xff', '0xff',
+  '0xff', '0xff', '0xff', '0xff', '0xfe', '0xee', '0xef', '0xe0', '0xf3', '0xe7',
+  '0x76', '0x7f', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff',
+  '0xff', '0xff', '0xef', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff',
+  '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xdf', '0xff',
+  '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff',
+  '0xff', '0xff', '0xff', '0xff', '0xdf', '0xff', '0xff', '0xff', '0xff', '0xff',
+  '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff',
+  '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff',
+  '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff',
+  '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff',
+  '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff', '0xff',
+  '0xff', '0xff'
+]);
+
+const extensions = {
+  text: ['.txt', '.TXT'],
+  image: ['.png', '.PNG', '.jpg', '.JPG', '.jpeg', '.JPEG']
+};
+
+const optionDefinitions = [
+  {
+    name: 'input',
+    alias: 'i',
+    type: String
+  },{
+    name: 'output',
+    alias: 'o',
+    type: String,
+  }
+];
+
+function setup () {
+  const options = commandLineArgs(optionDefinitions);
+  if (!options.input) {
+    console.error('JSONファイルが指定されていません');
+    return;
+  }
+  if (!options.output) {
+    console.error('出力先が指定されていません');
+    return;
+  }
+
+  const json = readFile(options.input, 'utf-8');
+  if (!json) {
+    return;
+  }
+  const config = parseJSON(json);
+  if (!(config && checkConfig(config))) {
+    return;
+  } else {
+    const dirPath = path.dirname(options.input);
+    convertFile(config, dirPath, options.output);
+  }
+}
+
+async function convertFile (config, dirPath, outputPath) {
+  let processCounter = 0;
+  console.log('processing...');
+  process.stdout.write(`${++processCounter} / ${config.files.length + 1}`);
+
+  // cover
+  const converter218 = new converter(128, 218);
+  const coverBinary = await converter218.image2binary(
+    path.join(dirPath, config.cover)
+  );
+
+  // title
+  const converter56 = new converter(128, 56);
+  let titleText = '「' + config.title + '」';
+  if (titleText.length > 40) {
+    titleText = titleText.slice(0, 38) + '…」';
+  } else if (titleText.length < 20) {
+    titleText = '\n' + titleText;
+  }
+  let titleBinary = converter56.text2binary(titleText)[0];
+  if (titleText.length <= 10) {
+    const shift = new Array((11 - titleText.length) * 12 / 2).fill('1').join('');
+    titleBinary = (shift + titleBinary).slice(0, titleBinary.length);
+  }
+
+  // home
+  const homeBuffer = Buffer.concat([
+    myBooksBuffer,
+    converter218.binary2buffer(coverBinary),
+    converter56.binary2buffer(titleBinary)
+  ]);
+
+  // pages
+  const converter284 = new converter(128, 284);
+  const pages = [
+    converter284.binary2buffer(
+      await converter284.image2binary(
+        path.join(dirPath, config.cover)
+      )
+    )
+  ];
+
+  for (let i = 0; i < config.files.length; i++) {
+    process.stdout.write(`\r${++processCounter} / ${config.files.length + 1}`);
+    const extension = path.extname(config.files[i]);
+    if (extensions.text.includes(extension)) {
+      const text = readFile(path.join(dirPath, config.files[i]), 'utf-8');
+      const binaryArray = converter284.text2binary(text);
+      for (let i = 0; i < binaryArray.length; i++) {
+        pages.push(converter284.binary2buffer(binaryArray[i]));
+      }
+    } else if (extensions.image.includes(extension)) {
+      const binary = await converter284.image2binary(
+        path.join(dirPath, config.files[i])
+      );
+      pages.push(converter284.binary2buffer(binary));
+    }
+  }
+
+  const withProgressBuffer = converter284.addProgressBar(pages);
+  const fileBuffer = Buffer.concat([homeBuffer, Buffer.concat(withProgressBuffer)]);
+
+  writeFile(outputPath, fileBuffer);
+  console.log('\ndone.');
+}
+
+function readFile (path, encoding = null) {
+  let file;
+  try {
+    if (encoding !== null) {
+      file = fs.readFileSync(path, {encoding});
+    } else {
+      file = fs.readFileSync(path);
+    }
+  } catch (e) {
+    console.error('ファイルの読み込み中に問題が発生しました\n=> ' + path);
+  }
+  return file;
+}
+
+function writeFile (path, buffer) {
+  try {
+    fs.writeFileSync(path, buffer);
+  } catch (e) {
+    console.error('ファイルの書き出し中に問題が発生しました\n=> ' + path);
+  }
+}
+
+function parseJSON (json) {
+  let obj;
+  try {
+    obj = JSON.parse(json);
+  } catch (e) {
+    console.error('JSONのパース中に問題が発生しました');
+  }
+  return obj;
+}
+
+function checkConfig (config) {
+  if (!(config.title && (config.title.length > 0))) {
+    console.error('タイトルが指定されていません');
+    return false;
+  }
+  if (!config.cover) {
+    console.error('カバーファイルが指定されていません');
+    return false;
+  }
+  if (!(config.files && (config.files.length > 0))) {
+    console.error('ページファイルが指定されていません');
+    return false;
+  }
+  return true;
+}
+
+setup();
