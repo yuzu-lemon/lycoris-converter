@@ -44,11 +44,6 @@ const myBooksBuffer = Buffer.from([
   '0xff', '0xff'
 ]);
 
-const extensions = {
-  text: ['.txt', '.TXT'],
-  image: ['.png', '.PNG', '.jpg', '.JPG', '.jpeg', '.JPEG']
-};
-
 const optionDefinitions = [
   {
     name: 'input',
@@ -130,13 +125,13 @@ async function convertFile (config, dirPath, outputPath) {
   for (let i = 0; i < config.files.length; i++) {
     process.stdout.write(`\r${++processCounter} / ${config.files.length + 1}`);
     const extension = path.extname(config.files[i]);
-    if (extensions.text.includes(extension)) {
+    if (['.txt', ".TXT"].includes(extension)) {
       const text = readFile(path.join(dirPath, config.files[i]), 'utf-8');
       const binaryArray = converter284.text2binary(text);
       for (let i = 0; i < binaryArray.length; i++) {
         pages.push(converter284.binary2buffer(binaryArray[i]));
       }
-    } else if (extensions.image.includes(extension)) {
+    } else {
       const binary = await converter284.image2binary(
         path.join(dirPath, config.files[i])
       );
