@@ -1,0 +1,28 @@
+Convert text and images to Lycoris viewable format.
+
+Supported formats
+cover: png, jpeg, gif, bmp, tiff
+files: txt, png, jpeg, gif, bmp, tiff
+
+Input JSON example
+{
+  "title": "I Am a Cat",
+  "cover": "cover.jpg",
+  "files": [
+    "chapter1.txt",
+    "chapter2.txt",
+    "chapter3.txt"
+  ]
+}
+
+Command example
+> node main.js -i ./input.json -o ./output
+
+* Before executing this command, execute the following command.
+> npm install
+
+Special thanks
+Shinonome font     http://openlab.ring.gr.jp/efont/shinonome/
+jimp               https://www.npmjs.com/package/jimp
+command-line-args  https://www.npmjs.com/package/command-line-args
+jconv              https://www.npmjs.com/package/jconv
