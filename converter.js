@@ -151,7 +151,7 @@ converter.prototype.image2binary = function (path) {
       .contain(config.width, config.height)
       .background(0xFFFFFFFF)
       .greyscale()
-      .getBufferAsync(jimp.MIME_PNG);
+      .write(__dirname + '/.tmp');
       resolve(reduceChannel(image.bitmap.data));
     }).catch((err) => {
       reject(err);
